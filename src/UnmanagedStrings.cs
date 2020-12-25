@@ -7,9 +7,6 @@ using System.Runtime.InteropServices;
 
 namespace NativeTools
 {
-    /// <summary>
-    ///     Manages the memory of strings.
-    /// </summary>
     public static unsafe class UnmanagedStrings
     {
         private static readonly Dictionary<string, IntPtr> StringsToPointers = new();
