@@ -2,6 +2,22 @@
 
 Shims and utilities for platform invoke (PInvoke) in .NET 5
 
+## Developers: How to include into your C# project
+
+Add the following to your .csproj:
+
+```xml
+<!-- NativeTools -->
+<PropertyGroup>
+  <NativeToolsSourcePath>PATH/TO/native-tools-cs/src</NativeToolsSourcePath>
+</PropertyGroup>
+<ItemGroup>
+  <Compile Include="$(NativeToolsSourcePath)/*.cs">
+    <Link>native-tools-cs/*.cs</Link>
+  </Compile>
+</ItemGroup>
+```
+
 ## Shims
 
 - [BlittableBoolean](./src/BlittableBoolean.cs): The [.NET `bool` is not blittable](https://docs.microsoft.com/en-us/dotnet/standard/native-interop/best-practices#blittable-types). This little wrapper for a `byte` is useful when you have structs which contain C standard booleans (`_Bool`) but also need to be blittable themselves.
