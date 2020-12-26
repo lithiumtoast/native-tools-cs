@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
-namespace NativeTools
+namespace lithiumtoast.NativeTools
 {
     public static unsafe class UnmanagedStrings
     {

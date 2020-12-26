@@ -5,7 +5,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
-namespace NativeTools
+namespace lithiumtoast.NativeTools
 {
     /// <summary>
     ///     Defines the runtime platforms (operating system + computer architecture).

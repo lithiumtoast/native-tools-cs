@@ -3,7 +3,7 @@
 
 using System.Runtime.InteropServices;
 
-namespace NativeTools
+namespace lithiumtoast.NativeTools
 {
     public static class Runtime
     {
