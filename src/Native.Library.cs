@@ -138,7 +138,8 @@ namespace lithiumtoast.NativeTools
                 return libraryHandle;
             }
 
-            throw new Exception($"Could not find the native library: {libraryName}. Did you forget to place a native library in the expected file path?");
+            throw new Exception(
+                $"Could not find the native library: {libraryName}. Did you forget to place a native library in the expected file path?");
         }
     }
 }
