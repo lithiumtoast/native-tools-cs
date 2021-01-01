@@ -15,8 +15,8 @@ namespace lithiumtoast.NativeTools
     [SuppressMessage("ReSharper", "MemberCanBePrivate.Global", Justification = "Public API.")]
     public static unsafe partial class Native
     {
-        private static readonly Dictionary<string, IntPtr> StringsToPointers = new();
-        private static readonly Dictionary<IntPtr, string> PointersToStrings = new();
+        private static readonly Dictionary<string, IntPtr> StringsToPointers = new Dictionary<string, IntPtr>();
+        private static readonly Dictionary<IntPtr, string> PointersToStrings = new Dictionary<IntPtr, string>();
 
         /// <summary>
         ///     Gets a <see cref="string" /> from a C style string (one dimensional <see cref="byte" /> array terminated by a

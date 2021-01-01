@@ -39,7 +39,7 @@ public readonly struct CBool
     /// <returns>A <see cref="CBool" />.</returns>
     public static implicit operator CBool(bool value)
     {
-        return new(value);
+        return new CBool(value);
     }
 
     /// <summary>
