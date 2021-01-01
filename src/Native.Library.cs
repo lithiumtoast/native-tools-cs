@@ -66,8 +66,8 @@ namespace lithiumtoast.NativeTools
             {
                 Environment.CurrentDirectory,
                 AppDomain.CurrentDomain.BaseDirectory,
-                $"libs/{runtimeIdentifier}",
-                $"runtimes/{runtimeIdentifier}/native"
+                Path.GetFullPath($"libs/{runtimeIdentifier}"),
+                Path.GetFullPath($"runtimes/{runtimeIdentifier}/native")
             };
 
             return _librarySearchDirectories = librarySearchDirectories.ToArray();
@@ -77,48 +77,22 @@ namespace lithiumtoast.NativeTools
         {
             var libraryPrefix = platform == NativeRuntimePlatform.Windows ? string.Empty : "lib";
             var libraryFileExtension = GetLibraryFileExtension(platform);
-            var libraryFileName = $"{libraryPrefix}{libraryName}";
+            var libraryFileName = $"{libraryPrefix}{libraryName}{libraryFileExtension}";
 
             var directories = GetSearchDirectories(platform);
             foreach (var directory in directories)
             {
-                if (TryFindLibraryPath(directory, libraryFileExtension, libraryFileName, out libraryFilePath))
-                {
-                    return true;
-                }
-            }
-
-            libraryFilePath = string.Empty;
-            return false;
-        }
-
-        private static bool TryFindLibraryPath(
-            string directoryPath,
-            string libraryFileExtension,
-            string libraryFileNameWithoutExtension,
-            out string result)
-        {
-            if (!Directory.Exists(directoryPath))
-            {
-                result = string.Empty;
-                return false;
-            }
-
-            var searchPattern = $"*{libraryFileExtension}";
-            var filePaths = Directory.EnumerateFiles(directoryPath, searchPattern);
-            foreach (var filePath in filePaths)
-            {
-                var fileName = Path.GetFileNameWithoutExtension(filePath);
-                if (!fileName.StartsWith(libraryFileNameWithoutExtension, StringComparison.Ordinal))
+                var filePath = Path.Combine(directory, libraryFileName);
+                if (!File.Exists(filePath))
                 {
                     continue;
                 }
 
-                result = filePath;
+                libraryFilePath = filePath;
                 return true;
             }
 
-            result = string.Empty;
+            libraryFilePath = string.Empty;
             return false;
         }
 
