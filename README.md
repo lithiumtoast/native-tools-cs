@@ -12,8 +12,8 @@ Add the following to your .csproj:
   <NativeToolsSourcePath>PATH/TO/native-tools-cs/src</NativeToolsSourcePath>
 </PropertyGroup>
 <ItemGroup>
-  <Compile Include="$(NativeToolsSourcePath)/*.cs">
-    <Link>native-tools-cs/*.cs</Link>
+  <Compile Include="$(NativeToolsSourcePath)/**/*">
+    <Link>native-tools-cs/%(Filename)%(Extension)</Link>
   </Compile>
 </ItemGroup>
 ```
