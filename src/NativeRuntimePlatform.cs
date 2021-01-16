@@ -26,7 +26,7 @@ namespace lithiumtoast.NativeTools
         ///     Desktop versions of macOS on 64-bit computing architecture.
         /// </summary>
         [SuppressMessage("ReSharper", "InconsistentNaming", Justification = "Product name.")]
-        [SuppressMessage("ReSharper", "SA1300", Justification = "Product name.")]
+        [SuppressMessage("StyleCop.Naming", "SA1300:ElementMustBeginWithUpperCaseLetter", Justification = "Product name.")]
         macOS = 2,
 
         /// <summary>
@@ -43,7 +43,7 @@ namespace lithiumtoast.NativeTools
         ///     Mobile versions of iOS (Apple) on 64-bit computing architecture.
         /// </summary>
         [SuppressMessage("ReSharper", "InconsistentNaming", Justification = "Product name.")]
-        [SuppressMessage("ReSharper", "SA1300", Justification = "Product name.")]
+        [SuppressMessage("StyleCop.Naming", "SA1300:ElementMustBeginWithUpperCaseLetter", Justification = "Product name.")]
         iOS = 5,
 
         /// <summary>
