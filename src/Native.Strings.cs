@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
@@ -11,131 +12,147 @@ using System.Runtime.InteropServices;
 
 namespace lithiumtoast.NativeTools
 {
-    [SuppressMessage("ReSharper", "MemberCanBeInternal", Justification = "Public API.")]
-    [SuppressMessage("ReSharper", "MemberCanBePrivate.Global", Justification = "Public API.")]
     public static unsafe partial class Native
     {
-        private static readonly Dictionary<string, IntPtr> StringsToPointers = new Dictionary<string, IntPtr>();
-        private static readonly Dictionary<IntPtr, string> PointersToStrings = new Dictionary<IntPtr, string>();
+        private static readonly Dictionary<uint, IntPtr> StringHashesToPointers = new();
+        private static readonly Dictionary<IntPtr, string> PointersToStrings = new();
+        private static readonly List<IntPtr> Pointers = new();
 
         /// <summary>
-        ///     Gets a <see cref="string" /> from a C style string (one dimensional <see cref="byte" /> array terminated by a
-        ///     <c>0x0</c>).
+        ///     Gets a <see cref="string" /> from a C style string (one dimensional <see cref="sbyte" /> array
+        ///     terminated by a <c>0x0</c>).
         /// </summary>
-        /// <param name="pointer">A pointer to the C string.</param>
-        /// <returns>A <see cref="string" /> equivalent to the C string pointed by <paramref name="pointer" />.</returns>
-        public static string GetStringFromBytePointer([In] byte* pointer)
+        /// <param name="cString">A pointer to the C string.</param>
+        /// <returns>A <see cref="string" /> equivalent to the C string pointed by <paramref name="cString" />.</returns>
+        public static string MapString(sbyte* cString)
         {
-            if (PointersToStrings.TryGetValue((IntPtr)pointer, out var @string))
+            var pointer = (IntPtr) cString;
+            if (PointersToStrings.TryGetValue(pointer, out var result))
             {
-                return @string;
+                return result;
             }
 
-            @string = Marshal.PtrToStringAnsi((IntPtr)pointer);
-            if (string.IsNullOrEmpty(@string))
+            var hash = Crc32B(cString);
+            if (StringHashesToPointers.TryGetValue(hash, out var pointer2))
+            {
+                result = PointersToStrings[pointer2];
+                return result;
+            }
+
+            result = Marshal.PtrToStringAnsi(pointer);
+            if (string.IsNullOrEmpty(result))
             {
                 return string.Empty;
             }
 
-            PointersToStrings.Add((IntPtr)pointer, @string);
-            StringsToPointers.Add(@string, (IntPtr)pointer);
+            StringHashesToPointers.Add(hash, pointer);
+            PointersToStrings.Add(pointer, result);
+            Pointers.Add(pointer);
 
-            return @string;
+            return result;
         }
 
         /// <summary>
-        ///     Gets a <see cref="string" /> from a C style string (one dimensional <see cref="byte" /> array terminated by a
-        ///     <c>0x0</c>).
-        /// </summary>
-        /// <param name="pointer">A pointer to the C string.</param>
-        /// <returns>A <see cref="string" /> equivalent to the C string pointed by <paramref name="pointer" />.</returns>
-        public static string GetStringFromIntPtr(IntPtr pointer)
-        {
-            return GetStringFromBytePointer((byte*)pointer);
-        }
-
-        /// <summary>
-        ///     Gets a pointer to a C string (a one dimensional <see cref="byte" /> array terminated by a <c>0x0</c>) from a
+        ///     Gets a C string pointer (a one dimensional <see cref="sbyte" /> array terminated by a <c>0x0</c>) from a
         ///     <see cref="string" />.
         /// </summary>
         /// <param name="string">A <see cref="string" />.</param>
-        /// <returns>A pointer to a C string (a one dimensional <see cref="byte" /> array terminated by a <c>0x0</c>).</returns>
-        public static byte* GetBytePointerFromString(string @string)
+        /// <returns>A C string pointer.</returns>
+        public static sbyte* MapCString(string @string)
         {
-            if (StringsToPointers.TryGetValue(@string, out var pointer))
+            var hash = Crc32B(@string);
+            if (StringHashesToPointers.TryGetValue(hash, out var pointer))
             {
-                return (byte*)pointer;
+                return (sbyte*)pointer;
             }
 
             pointer = Marshal.StringToHGlobalAnsi(@string);
+            StringHashesToPointers.Add(hash, pointer);
             PointersToStrings.Add(pointer, @string);
-            StringsToPointers.Add(@string, pointer);
+            Pointers.Add(pointer);
 
-            return (byte*)pointer;
+            return (sbyte*) pointer;
         }
 
         /// <summary>
-        ///     Gets a pointer to a C string (a one dimensional <see cref="byte" /> array terminated by a <c>0x0</c>) from a
-        ///     <see cref="string" />.
+        ///     Gets an array pointer of C string pointers (pointer to multiple one dimensional <see cref="sbyte" />
+        ///     arrays, each of which is terminated by a <c>0x0</c>) from a <see cref="ReadOnlySpan{string}" />.
         /// </summary>
-        /// <param name="string">A <see cref="string" />.</param>
-        /// <returns>A pointer to a C string (a one dimensional <see cref="byte" /> array terminated by a <c>0x0</c>).</returns>
-        public static IntPtr GetIntPtrFromString(string @string)
+        /// <param name="values">The strings.</param>
+        /// <returns>An array pointer of C string pointers.</returns>
+        public static void** MapCStringArray(ReadOnlySpan<string> values)
         {
-            return (IntPtr)GetBytePointerFromString(@string);
+            var pointerSize = IntPtr.Size;
+            var bytes = (byte*) Marshal.AllocHGlobal(pointerSize * values.Length);
+            Pointers.Add((IntPtr) bytes);
+            var result = (void**) bytes;
+            for (var i = 0; i < values.Length; ++i)
+            {
+                var @string = values[i];
+                var cString = MapCString(@string);
+                result[i] = cString;
+            }
+
+            return result;
         }
 
         /// <summary>
-        ///     Frees all <see cref="string" /> objects allocated by <see cref="GetStringFromBytePointer" />,
-        ///     <see cref="GetStringFromIntPtr" />, <see cref="GetBytePointerFromString" />, or <see cref="GetIntPtrFromString" />.
+        ///     Frees the memory for all allocated C strings and releases references to all <see cref="string" />
+        ///     objects which happened during <see cref="MapString" />, <see cref="MapCString" />,
+        ///     or <see cref="MapCStringArray" />. Does <b>not</b> garbage collect.
         /// </summary>
         public static void ClearStrings()
         {
-            foreach (var pointer in PointersToStrings.Keys)
+            foreach (var pointer in Pointers)
             {
                 Marshal.FreeHGlobal(pointer);
             }
 
+            StringHashesToPointers.Clear();
             PointersToStrings.Clear();
-            StringsToPointers.Clear();
+            Pointers.Clear();
         }
         
-        /// <summary>
-        ///     Frees the <see cref="string" /> object allocated by <see cref="GetBytePointerFromString" /> or <see cref="GetIntPtrFromString" />.
-        /// </summary>
-        /// <param name="pointer">A pointer to the C string.</param>
-        public static void ClearString(IntPtr pointer)
+        // https://stackoverflow.com/questions/21001659/crc32-algorithm-implementation-in-c-without-a-look-up-table-and-with-a-public-li
+        private static uint Crc32B(sbyte *cString)
         {
-            if (PointersToStrings.ContainsKey(pointer))
+            var i = 0;
+            var crc = 0xFFFFFFFF;
+            while (cString[i] != 0)
             {
-                PointersToStrings.Remove(pointer);
+                var @byte = (uint) cString[i];
+                crc ^= @byte;
+                int j;
+                for (j = 7; j >= 0; j--)
+                {
+                    // Do eight times.
+                    var mask = (uint) -(crc & 1);
+                    crc = (crc >> 1) ^ (0xEDB88320 & mask);
+                }
+
+                i += 1;
             }
 
-            string? @string = null;
-            foreach (var (key, value) in StringsToPointers)
+            return ~crc;
+        }
+
+        private static uint Crc32B(string @string)
+        {
+            var crc = 0xFFFFFFFF;
+            foreach (var value in @string)
             {
-                if (value == pointer)
+                var @byte = (uint) value;
+                crc ^= @byte;
+                int j;
+                for (j = 7; j >= 0; j--)
                 {
-                    @string = key;
-                    break;
+                    // Do eight times.
+                    var mask = (uint) -(crc & 1);
+                    crc = (crc >> 1) ^ (0xEDB88320 & mask);
                 }
             }
 
-            if (@string != null)
-            {
-                StringsToPointers.Remove(@string);
-            }
-
-            Marshal.FreeHGlobal(pointer);
-        }
-
-        /// <summary>
-        ///     Frees the <see cref="string" /> object allocated by <see cref="GetBytePointerFromString" /> or <see cref="GetIntPtrFromString" />.
-        /// </summary>
-        /// <param name="pointer">A pointer to the C string.</param>
-        public static void ClearString([In] byte* pointer)
-        {
-            ClearString((IntPtr)pointer);
+            return ~crc;
         }
     }
 }
