@@ -1,3 +1,5 @@
+# Superseded by `C2CS.NativeTools` C# project: https://github.com/lithiumtoast/c2cs
+
 # Native Tools C#
 
 Shims and utilities for platform invoke (PInvoke) in .NET 5
